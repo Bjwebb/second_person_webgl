@@ -1,4 +1,13 @@
 window.onload = ->
+  if (location.hash != '#1' && location.hash != '#2')
+    alert("Pick a player!");
+  
+  player_id = location.hash.slice(1)
+  other_id = if (player_id == "1") then "2" else "1"
+  
+  peer = new Peer(player_id, {key: 'bt01ki4in04tpgb9'})
+  other_conn = peer.connect(other_id);
+
   # set the scene size
   WIDTH = 800
   HEIGHT = 600
@@ -22,8 +31,12 @@ window.onload = ->
   scene = new THREE.Scene()
 
   # the camera starts at 0,0,0 so pull it back
-  camera.position.z = 150
-  camera2.position.z = 300
+  if (player == "1")
+    camera.position.z = 150
+    camera2.position.z = 300
+  else
+    camera.position.z = 300
+    camera2.position.z = 150
 
   # start the renderer
   renderer.setSize WIDTH, HEIGHT
@@ -33,6 +46,7 @@ window.onload = ->
 
   # create the sphere's material
   sphereMaterial = new THREE.MeshLambertMaterial(color: 0xCC0000)
+  sphereMaterial2 = new THREE.MeshLambertMaterial(color: 0x00CC00)
 
   # set up the sphere vars
   radius = 50
@@ -42,7 +56,7 @@ window.onload = ->
   # create a new mesh with sphere geometry -
   # we will cover the sphereMaterial next!
   sphere = new THREE.Mesh(new THREE.SphereGeometry(radius, segments, rings), sphereMaterial)
-  sphere2 = new THREE.Mesh(new THREE.SphereGeometry(radius, segments, rings), sphereMaterial)
+  sphere2 = new THREE.Mesh(new THREE.SphereGeometry(radius, segments, rings), sphereMaterial2)
   camera.add sphere
   camera2.add sphere2
 
@@ -90,7 +104,24 @@ window.onload = ->
       when 40
         camera.position.x += 10*Math.sin(camera.rotation.y)
         camera.position.z += 10*Math.cos(camera.rotation.y)
+
+    other_conn.on('open', () ->
+      conn.send(
+        event: 'move',
+        position: camera.position,
+        rotation: camera.rotation
+      )
+    )
+
+    peer.on('connection', (conn) ->
+      conn.on('data', (data) ->
+        switch data.event
+          when 'move'
+            camera2.position = data.position
+            camera2.rotation = data.rotation
+      )
+    )
+
     
   # draw!
   animate()
-
