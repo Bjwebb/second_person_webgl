@@ -9,6 +9,7 @@ window.onload = ->
   other_conn = undefined
   peer.on 'open', ->
     other_conn = peer.connect(other_id)
+    setup_other_conn()
 
   # set the scene size
   WIDTH = window.innerWidth
@@ -108,6 +109,7 @@ window.onload = ->
         camera.position.x += 10*Math.sin(camera.rotation.y)
         camera.position.z += 10*Math.cos(camera.rotation.y)
 
+    console.log(other_conn)
     if other_conn
       other_conn.send(
         event: 'move',
@@ -121,7 +123,14 @@ window.onload = ->
       )
 
   peer.on('connection', (conn) ->
-    conn.on('data', (data) ->
+    other_conn = conn
+    setup_other_conn()
+  )
+
+  
+  # FIXME
+  setup_other_conn = ->
+    other_conn.on('data', (data) ->
       console.log(data)
       switch data.event
         when 'move'
@@ -132,7 +141,6 @@ window.onload = ->
           cameras[other_id].rotation.y = data.rotation_y
           cameras[other_id].rotation.z = data.rotation_z
     )
-  )
 
 
   # draw!
