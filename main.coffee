@@ -1,13 +1,14 @@
-
 window.onload = ->
     if (location.hash != '#0' && location.hash != '#1')
-        alert("Pick a player!");
+        alert("Pick a player!")
     
     player_id = location.hash.slice(1)
+    players = { }
+    players[player_id] = undefined
     other_id = if (player_id == "0") then "1" else "0"
     
     peer = new Peer(player_id, {key: 'bt01ki4in04tpgb9', debug:3})
-    other_conn = undefined
+    other_conn = null
     peer.on 'open', ->
         other_conn = peer.connect(other_id)
         setup_other_conn()
@@ -61,7 +62,7 @@ window.onload = ->
         scene.add camera
 
     wallMaterial = new THREE.MeshLambertMaterial(0xCCCCCC)
-    #wallMaterial.side = THREE.DoubleSide
+    wallMaterial.side = THREE.DoubleSide
     floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), wallMaterial)
     floor.rotation.x = -Math.PI/2
     floor.position.y = -100
@@ -127,24 +128,21 @@ window.onload = ->
             when 40
                 camera.position.x += 10*Math.sin(camera.rotation.y)
                 camera.position.z += 10*Math.cos(camera.rotation.y)
-        console.log 'a'
-        console.log walls
         if false # if collision
             camera.position = old_position
             camera.rotation = old_rotation
 
-      console.log(other_conn)
-      if other_conn
-        other_conn.send(
-          event: 'move',
-          # FIXME
-          position_x: cameras[player_id].position.x,
-          position_y: cameras[player_id].position.y,
-          position_z: cameras[player_id].position.z,
-          rotation_x: cameras[player_id].rotation.x,
-          rotation_y: cameras[player_id].rotation.y,
-          rotation_z: cameras[player_id].rotation.z,
-        )
+        if other_conn
+          other_conn.send(
+            event: 'move',
+            # FIXME
+            position_x: cameras[player_id].position.x,
+            position_y: cameras[player_id].position.y,
+            position_z: cameras[player_id].position.z,
+            rotation_x: cameras[player_id].rotation.x,
+            rotation_y: cameras[player_id].rotation.y,
+            rotation_z: cameras[player_id].rotation.z
+          )
 
     peer.on('connection', (conn) ->
       other_conn = conn
@@ -154,17 +152,24 @@ window.onload = ->
     
     # FIXME
     setup_other_conn = ->
-      other_conn.on('data', (data) ->
-        console.log(data)
-        switch data.event
-          when 'move'
-            cameras[other_id].position.x = data.position_x
-            cameras[other_id].position.y = data.position_y
-            cameras[other_id].position.z = data.position_z
-            cameras[other_id].rotation.x = data.rotation_x
-            cameras[other_id].rotation.y = data.rotation_y
-            cameras[other_id].rotation.z = data.rotation_z
-      )
+        other_conn.on 'open', ->
+          other_conn.send(
+              event: 'players',
+              players: players
+          )
+        other_conn.on('data', (data) ->
+            switch data.event
+                when 'move'
+                    cameras[other_id].position.x = data.position_x
+                    cameras[other_id].position.y = data.position_y
+                    cameras[other_id].position.z = data.position_z
+                    cameras[other_id].rotation.x = data.rotation_x
+                    cameras[other_id].rotation.y = data.rotation_y
+                    cameras[other_id].rotation.z = data.rotation_z
+                when 'players'
+                    for k,v of data.players
+                        players[k] = v
+        )
 
 
     # draw!
