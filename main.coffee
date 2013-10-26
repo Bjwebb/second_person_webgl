@@ -5,8 +5,10 @@ window.onload = ->
   player_id = location.hash.slice(1)
   other_id = if (player_id == "0") then "1" else "0"
   
-  peer = new Peer(player_id, {key: 'bt01ki4in04tpgb9'})
-  other_conn = peer.connect(other_id);
+  peer = new Peer(player_id, {key: 'bt01ki4in04tpgb9', debug:3})
+  other_conn = undefined
+  peer.on 'open', ->
+    other_conn = peer.connect(other_id)
 
   # set the scene size
   WIDTH = window.innerWidth
@@ -106,22 +108,32 @@ window.onload = ->
         camera.position.x += 10*Math.sin(camera.rotation.y)
         camera.position.z += 10*Math.cos(camera.rotation.y)
 
-    other_conn.on('open', () ->
-      conn.send(
+    if other_conn
+      other_conn.send(
         event: 'move',
-        position: cameras[player_id].position,
-        rotation: cameras[player_id].rotation
+        # FIXME
+        position_x: cameras[player_id].position.x,
+        position_y: cameras[player_id].position.y,
+        position_z: cameras[player_id].position.z,
+        rotation_x: cameras[player_id].rotation.x,
+        rotation_y: cameras[player_id].rotation.y,
+        rotation_z: cameras[player_id].rotation.z,
       )
-    )
 
-    peer.on('connection', (conn) ->
-      conn.on('data', (data) ->
-        switch data.event
-          when 'move'
-            camera2.position = data.position
-            camera2.rotation = data.rotation
-      )
+  peer.on('connection', (conn) ->
+    conn.on('data', (data) ->
+      console.log(data)
+      switch data.event
+        when 'move'
+          cameras[other_id].position.x = data.position_x
+          cameras[other_id].position.y = data.position_y
+          cameras[other_id].position.z = data.position_z
+          cameras[other_id].rotation.x = data.rotation_x
+          cameras[other_id].rotation.y = data.rotation_y
+          cameras[other_id].rotation.z = data.rotation_z
     )
+  )
+
 
   # draw!
   animate()
