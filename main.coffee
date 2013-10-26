@@ -5,7 +5,8 @@ window.onload = ->
 
   # set some camera attributes
   VIEW_ANGLE = 45
-  ASPECT = WIDTH / HEIGHT
+  # Major FIXME
+  ASPECT = (WIDTH/2) / HEIGHT
   NEAR = 0.1
   FAR = 10000
 
@@ -17,10 +18,12 @@ window.onload = ->
   # and a scene
   renderer = new THREE.WebGLRenderer()
   camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR)
+  camera2 = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR)
   scene = new THREE.Scene()
 
   # the camera starts at 0,0,0 so pull it back
-  camera.position.z = 300
+  camera.position.z = 150
+  camera2.position.z = 300
 
   # start the renderer
   renderer.setSize WIDTH, HEIGHT
@@ -39,7 +42,9 @@ window.onload = ->
   # create a new mesh with sphere geometry -
   # we will cover the sphereMaterial next!
   sphere = new THREE.Mesh(new THREE.SphereGeometry(radius, segments, rings), sphereMaterial)
-  scene.add sphere
+  sphere2 = new THREE.Mesh(new THREE.SphereGeometry(radius, segments, rings), sphereMaterial)
+  camera.add sphere
+  camera2.add sphere2
 
   floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), sphereMaterial)
   floor.rotation.x = -Math.PI/2
@@ -49,6 +54,7 @@ window.onload = ->
 
   # and the camera
   scene.add camera
+  scene.add camera2
 
   # create a point light
   pointLight = new THREE.PointLight(0xFFFFFF)
@@ -66,7 +72,13 @@ window.onload = ->
     render()
 
   render = ->
+    renderer.enableScissorTest ( true );
+    renderer.setViewport(0, 0, WIDTH/2, HEIGHT);
+    renderer.setScissor(0, 0, WIDTH/2, HEIGHT);
     renderer.render scene, camera
+    renderer.setViewport(WIDTH/2, 0, WIDTH/2, HEIGHT);
+    renderer.setScissor(WIDTH/2, 0, WIDTH/2, HEIGHT);
+    renderer.render scene, camera2
 
   $(document).keydown (event) ->
     switch event.which
