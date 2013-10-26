@@ -9,8 +9,8 @@ window.onload = ->
   other_conn = peer.connect(other_id);
 
   # set the scene size
-  WIDTH = 800
-  HEIGHT = 600
+  WIDTH = window.innerWidth
+  HEIGHT = window.innerHeight
 
   # set some camera attributes
   VIEW_ANGLE = 45
@@ -26,17 +26,17 @@ window.onload = ->
   # create a WebGL renderer, camera
   # and a scene
   renderer = new THREE.WebGLRenderer()
-  camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR)
-  camera2 = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR)
+  cameras = [
+    new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR),
+    new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR)
+    ]
   scene = new THREE.Scene()
 
   # the camera starts at 0,0,0 so pull it back
-  if (player == "1")
-    camera.position.z = 150
-    camera2.position.z = 300
+  if (player_id == "1")
+    cameras[1].position.z = 300
   else
-    camera.position.z = 300
-    camera2.position.z = 150
+    cameras[0].position.z = 300
 
   # start the renderer
   renderer.setSize WIDTH, HEIGHT
@@ -48,27 +48,24 @@ window.onload = ->
   sphereMaterial = new THREE.MeshLambertMaterial(color: 0xCC0000)
   sphereMaterial2 = new THREE.MeshLambertMaterial(color: 0x00CC00)
 
-  # set up the sphere vars
-  radius = 50
-  segments = 16
-  rings = 16
+  cubeGeometry = new THREE.CubeGeometry(100, 100, 100)
 
   # create a new mesh with sphere geometry -
   # we will cover the sphereMaterial next!
-  sphere = new THREE.Mesh(new THREE.SphereGeometry(radius, segments, rings), sphereMaterial)
-  sphere2 = new THREE.Mesh(new THREE.SphereGeometry(radius, segments, rings), sphereMaterial2)
-  camera.add sphere
-  camera2.add sphere2
+  cube = new THREE.Mesh(cubeGeometry, sphereMaterial)
+  cube2 = new THREE.Mesh(cubeGeometry, sphereMaterial2)
+  cameras[0].add cube
+  cameras[1].add cube2
+  for camera in cameras
+  #  cube = new THREE.Mesh(cubeGeometry, sphereMaterial)
+  #  camera.add cube
+    scene.add camera
 
   floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), sphereMaterial)
   floor.rotation.x = -Math.PI/2
   floor.position.y = -100
   scene.add floor
 
-
-  # and the camera
-  scene.add camera
-  scene.add camera2
 
   # create a point light
   pointLight = new THREE.PointLight(0xFFFFFF)
@@ -85,16 +82,19 @@ window.onload = ->
     requestAnimationFrame animate
     render()
 
+
   render = ->
     renderer.enableScissorTest ( true );
     renderer.setViewport(0, 0, WIDTH/2, HEIGHT);
     renderer.setScissor(0, 0, WIDTH/2, HEIGHT);
-    renderer.render scene, camera
+    renderer.render scene, cameras[0]
     renderer.setViewport(WIDTH/2, 0, WIDTH/2, HEIGHT);
     renderer.setScissor(WIDTH/2, 0, WIDTH/2, HEIGHT);
-    renderer.render scene, camera2
+    renderer.render scene, cameras[1]
 
   $(document).keydown (event) ->
+    camera = cameras[0]
+    views = Math.ceil(Math.sqrt(camera.length))
     switch event.which
       when 37 then camera.rotation.y += 0.1
       when 38
@@ -122,6 +122,6 @@ window.onload = ->
       )
     )
 
-    
   # draw!
   animate()
+ 
