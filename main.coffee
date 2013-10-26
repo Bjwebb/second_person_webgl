@@ -1,6 +1,7 @@
+
 window.onload = ->
     if (location.hash != '#0' && location.hash != '#1')
-      alert("Pick a player!");
+        alert("Pick a player!");
     
     player_id = location.hash.slice(1)
     other_id = if (player_id == "0") then "1" else "0"
@@ -8,8 +9,8 @@ window.onload = ->
     peer = new Peer(player_id, {key: 'bt01ki4in04tpgb9', debug:3})
     other_conn = undefined
     peer.on 'open', ->
-      other_conn = peer.connect(other_id)
-      setup_other_conn()
+        other_conn = peer.connect(other_id)
+        setup_other_conn()
 
     # set the scene size
     WIDTH = window.innerWidth
@@ -29,11 +30,11 @@ window.onload = ->
     # and a scene
     renderer = new THREE.WebGLRenderer()
     cameras = [
-      new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR),
-      new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR),
-      new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR),
-      new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR)
-      ]
+        new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR),
+        new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR),
+        new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR),
+        new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR)
+        ]
     scene = new THREE.Scene()
 
     # the camera starts at 0,0,0 so pull it back
@@ -54,15 +55,25 @@ window.onload = ->
     cubeGeometry = new THREE.CubeGeometry(100, 100, 100)
 
     for camera,i in cameras
-      material = new THREE.MeshLambertMaterial(color:colors[i%colors.length])
-      cube = new THREE.Mesh(cubeGeometry, material)
-      camera.add cube
-      scene.add camera
+        material = new THREE.MeshLambertMaterial(color:colors[i%colors.length])
+        cube = new THREE.Mesh(cubeGeometry, material)
+        camera.add cube
+        scene.add camera
 
-    floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshLambertMaterial(0xCCCCCC))
+    wallMaterial = new THREE.MeshLambertMaterial(0xCCCCCC)
+    #wallMaterial.side = THREE.DoubleSide
+    floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), wallMaterial)
     floor.rotation.x = -Math.PI/2
     floor.position.y = -100
     scene.add floor
+    walls_data = [ [ 0, -100 ] ]
+    walls = []
+    for wall_data in walls_data
+        wall = new THREE.Mesh(new THREE.PlaneGeometry(100, 500), wallMaterial)
+        wall.position.x = wall_data[0]
+        wall.position.z = wall_data[1]
+        scene.add wall
+        walls.push wall
 
 
     # create a point light
@@ -88,26 +99,39 @@ window.onload = ->
       view_height = HEIGHT/views_y
       renderer.enableScissorTest(true)
       for camera,i in cameras
-        x = i%views_x
-        y = Math.floor(i/views_y)
-        camera.aspect = view_width/view_height
-        # FIXME don't do this every frame
-        camera.updateProjectionMatrix()
-        renderer.setViewport(x*view_width, y*view_height, view_width, view_height)
-        renderer.setScissor(x*view_width, y*view_height, view_width, view_height)
-        renderer.render scene, camera
+          x = i%views_x
+          y = Math.floor(i/views_y)
+          camera.aspect = view_width/view_height
+          # FIXME don't do this every frame
+          camera.updateProjectionMatrix()
+          renderer.setViewport(x*view_width, y*view_height, view_width, view_height)
+          renderer.setScissor(x*view_width, y*view_height, view_width, view_height)
+          renderer.render scene, camera
 
     $(document).keydown (event) ->
-      camera = cameras[player_id]
-      switch event.which
-        when 37 then camera.rotation.y += 0.1
-        when 38
-          camera.position.x -= 10*Math.sin(camera.rotation.y)
-          camera.position.z -= 10*Math.cos(camera.rotation.y)
-        when 39 then camera.rotation.y -= 0.1
-        when 40
-          camera.position.x += 10*Math.sin(camera.rotation.y)
-          camera.position.z += 10*Math.cos(camera.rotation.y)
+        camera = cameras[player_id]
+        old_position = camera.position.clone()
+        old_rotation = camera.rotation.clone()
+        switch event.which
+            when 90 then camera.rotation.y += 0.1
+            when 88 then camera.rotation.y -= 0.1
+            when 37
+                camera.position.x -= 10*Math.cos(camera.rotation.y)
+                camera.position.z += 10*Math.sin(camera.rotation.y)
+            when 38
+                camera.position.x -= 10*Math.sin(camera.rotation.y)
+                camera.position.z -= 10*Math.cos(camera.rotation.y)
+            when 39
+                camera.position.x += 10*Math.cos(camera.rotation.y)
+                camera.position.z -= 10*Math.sin(camera.rotation.y)
+            when 40
+                camera.position.x += 10*Math.sin(camera.rotation.y)
+                camera.position.z += 10*Math.cos(camera.rotation.y)
+        console.log 'a'
+        console.log walls
+        if false # if collision
+            camera.position = old_position
+            camera.rotation = old_rotation
 
       console.log(other_conn)
       if other_conn
