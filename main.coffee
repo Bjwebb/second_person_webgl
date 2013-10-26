@@ -14,8 +14,7 @@ window.onload = ->
 
   # set some camera attributes
   VIEW_ANGLE = 45
-  # Major FIXME
-  ASPECT = (WIDTH/2) / HEIGHT
+  ASPECT = 1 #Temporary, reset below
   NEAR = 0.1
   FAR = 10000
 
@@ -28,6 +27,8 @@ window.onload = ->
   renderer = new THREE.WebGLRenderer()
   cameras = [
     new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR),
+    new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR),
+    new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR),
     new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR)
     ]
   scene = new THREE.Scene()
@@ -37,6 +38,9 @@ window.onload = ->
     cameras[1].position.z = 300
   else
     cameras[0].position.z = 300
+  cameras[2].position.x = 300
+  cameras[3].position.y = 1000
+  cameras[3].rotation.x = -Math.PI/2
 
   # start the renderer
   renderer.setSize WIDTH, HEIGHT
@@ -45,23 +49,17 @@ window.onload = ->
   $container.append renderer.domElement
 
   # create the sphere's material
-  sphereMaterial = new THREE.MeshLambertMaterial(color: 0xCC0000)
-  sphereMaterial2 = new THREE.MeshLambertMaterial(color: 0x00CC00)
+  colors = [0xCC0000, 0x00CC00, 0x0000CC, 0xCCCC00, 0xCC00CC, 0x00CCCC]
 
   cubeGeometry = new THREE.CubeGeometry(100, 100, 100)
 
-  # create a new mesh with sphere geometry -
-  # we will cover the sphereMaterial next!
-  cube = new THREE.Mesh(cubeGeometry, sphereMaterial)
-  cube2 = new THREE.Mesh(cubeGeometry, sphereMaterial2)
-  cameras[0].add cube
-  cameras[1].add cube2
-  for camera in cameras
-  #  cube = new THREE.Mesh(cubeGeometry, sphereMaterial)
-  #  camera.add cube
+  for camera,i in cameras
+    material = new THREE.MeshLambertMaterial(color:colors[i%colors.length])
+    cube = new THREE.Mesh(cubeGeometry, material)
+    camera.add cube
     scene.add camera
 
-  floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), sphereMaterial)
+  floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshLambertMaterial(0xCCCCCC))
   floor.rotation.x = -Math.PI/2
   floor.position.y = -100
   scene.add floor
@@ -84,17 +82,23 @@ window.onload = ->
 
 
   render = ->
-    renderer.enableScissorTest ( true );
-    renderer.setViewport(0, 0, WIDTH/2, HEIGHT);
-    renderer.setScissor(0, 0, WIDTH/2, HEIGHT);
-    renderer.render scene, cameras[0]
-    renderer.setViewport(WIDTH/2, 0, WIDTH/2, HEIGHT);
-    renderer.setScissor(WIDTH/2, 0, WIDTH/2, HEIGHT);
-    renderer.render scene, cameras[1]
+    views_x = Math.ceil(Math.sqrt(cameras.length))
+    views_y = views_x
+    view_width = WIDTH/views_x
+    view_height = HEIGHT/views_y
+    renderer.enableScissorTest(true)
+    for camera,i in cameras
+      x = i%views_x
+      y = Math.floor(i/views_y)
+      camera.aspect = view_width/view_height
+      # FIXME don't do this every frame
+      camera.updateProjectionMatrix()
+      renderer.setViewport(x*view_width, y*view_height, view_width, view_height)
+      renderer.setScissor(x*view_width, y*view_height, view_width, view_height)
+      renderer.render scene, camera
 
   $(document).keydown (event) ->
     camera = cameras[0]
-    views = Math.ceil(Math.sqrt(camera.length))
     switch event.which
       when 37 then camera.rotation.y += 0.1
       when 38
