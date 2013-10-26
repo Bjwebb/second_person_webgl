@@ -1,9 +1,9 @@
 window.onload = ->
-  if (location.hash != '#1' && location.hash != '#2')
+  if (location.hash != '#0' && location.hash != '#1')
     alert("Pick a player!");
   
   player_id = location.hash.slice(1)
-  other_id = if (player_id == "1") then "2" else "1"
+  other_id = if (player_id == "0") then "1" else "0"
   
   peer = new Peer(player_id, {key: 'bt01ki4in04tpgb9'})
   other_conn = peer.connect(other_id);
@@ -34,10 +34,7 @@ window.onload = ->
   scene = new THREE.Scene()
 
   # the camera starts at 0,0,0 so pull it back
-  if (player_id == "1")
-    cameras[1].position.z = 300
-  else
-    cameras[0].position.z = 300
+  cameras[1].position.z = 300
   cameras[2].position.x = 300
   cameras[3].position.y = 1000
   cameras[3].rotation.x = -Math.PI/2
@@ -98,7 +95,7 @@ window.onload = ->
       renderer.render scene, camera
 
   $(document).keydown (event) ->
-    camera = cameras[0]
+    camera = cameras[player_id]
     switch event.which
       when 37 then camera.rotation.y += 0.1
       when 38
@@ -112,8 +109,8 @@ window.onload = ->
     other_conn.on('open', () ->
       conn.send(
         event: 'move',
-        position: camera.position,
-        rotation: camera.rotation
+        position: cameras[player_id].position,
+        rotation: cameras[player_id].rotation
       )
     )
 
