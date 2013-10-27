@@ -3,6 +3,7 @@ window.onload = ->
     players = { }
     players[player_id] = undefined
     player_connections = {}
+    scores = {}
 
     peer = new Peer(player_id, {key: 'bt01ki4in04tpgb9', debug:3})
 
@@ -48,6 +49,7 @@ window.onload = ->
     renderer.setSize WIDTH, HEIGHT
 
     # attach the render-supplied DOM element
+    $container.append '<div style="float:left; font-size: 100px" id="scores"></div>'
     $container.append renderer.domElement
 
     # create the sphere's material
@@ -58,10 +60,16 @@ window.onload = ->
     #cameras[3].rotation.x = -Math.PI/2
     teapotGeometry = new THREE.TeapotGeometry(100, true, true, true, true, true)
     for camera,i in cameras
+        color = colors[i%colors.length]
+        hex = color.toString(16)
+        hex = '000000'.substr(0, 6 - hex.length) + hex
+        scores[i] = 0
+        $('#scores').append('<span id="score'+i+'" style="color: #'+hex+'">0</div>')
+
         camera.position.x = 300*(Math.floor(i/2))
         camera.position.z = -900*(i%2)
         camera.rotation.y = Math.PI*(i%2)
-        material = new THREE.MeshLambertMaterial(color:colors[i%colors.length])
+        material = new THREE.MeshLambertMaterial(color:color)
         teapot = new THREE.Mesh(teapotGeometry, material)
         teapot.rotation.y = Math.PI/2
         camera.add teapot
@@ -130,6 +138,14 @@ window.onload = ->
           renderer.render scene, camera
           #camera.traverse (object) -> object.visible = true
 
+    process_win = (id) ->
+        scores[id] += 1
+        $('#score'+id).html scores[id]
+
+    process_lose = (id) ->
+        scores[id] -= 1
+        $('#score'+id).html scores[id]
+
     $(document).keydown (event) ->
         camera = cameras[player_id]
         old_position = camera.position.clone()
@@ -170,7 +186,8 @@ window.onload = ->
                     new THREE.Vector2(other_camera.position.x+200*direction.x, other_camera.position.z+200*direction.z),
                     new THREE.Vector2(camera.position.x, camera.position.z),
                     PLAYER_RADIUS)
-                other_camera.position.y = -1000
+                process_win(player_id)
+                process_lose(other_id)
             if other_camera.position.clone().sub(camera.position).length() < PLAYER_RADIUS*2
                 console.log('Teapot collision')
                 camera.position = old_position
