@@ -23,7 +23,7 @@ window.onload = ->
     NEAR = 0.1
     FAR = 10000
 
-    PLAYER_RADIUS = 100
+    PLAYER_RADIUS = 70
 
     # get the DOM element to attach to
     # - assume we've got jQuery to hand
@@ -128,7 +128,6 @@ window.onload = ->
     $(document).keydown (event) ->
         camera = cameras[player_id]
         old_position = camera.position.clone()
-        old_rotation = camera.rotation.clone()
         switch event.which
             when 90 then camera.rotation.y += 0.1
             when 88 then camera.rotation.y -= 0.1
@@ -149,7 +148,6 @@ window.onload = ->
             if line_intersects_circ(wall_line[0], wall_line[1], new THREE.Vector2(camera.position.x, camera.position.z), PLAYER_RADIUS)
                 console.log('Collision with', wall_line)
                 camera.position = old_position
-                camera.rotation = old_rotation
 
         for other_id,player_connection of player_connections
           player_connection.send(
