@@ -254,8 +254,9 @@ window.onload = ->
 
     peer.on('connection', (conn) ->
         console.log(conn)
-        player_connections[conn.peer.split('_')[1]] = conn
-        setup_other_conn(conn.peer)
+        local_id = conn.peer.split('_')[1]
+        player_connections[local_id] = conn
+        setup_other_conn(local_id)
     )
 
     
@@ -277,6 +278,11 @@ window.onload = ->
                     cameras[data.player_id].rotation.z = data.rotation_z
                 when 'players'
                     for k,v of data.players
+                        console.log k, player_connections
+                        if not (k of player_connections) and player_id != '0'
+                            console.log('mooooooo')
+                            player_connections[k] = peer.connect(id_prefix+'_'+k)
+                            setup_other_conn(k)
                         players[k] = v
                 when 'win'
                     process_win(data.player_id, true)
