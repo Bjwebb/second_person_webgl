@@ -1,5 +1,7 @@
 # Second Person Teapot Jousting Simulator
 
+Youtube video at http://www.youtube.com/watch?v=PWhbJ02S258
+
 Demo at http://bjwebb.co.uk/files/teapots/ but you need to pass a suitable hash to specify the 'room' and teapot number.
 
 e.g. the teapots in room a are
