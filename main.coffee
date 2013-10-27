@@ -58,7 +58,7 @@ window.onload = ->
     #cameras[3].rotation.x = -Math.PI/2
     teapotGeometry = new THREE.TeapotGeometry(100, true, true, true, true, true)
     for camera,i in cameras
-        camera.position.x = 300*(i/2)
+        camera.position.x = 300*(Math.floor(i/2))
         camera.position.z = -900*(i%2)
         camera.rotation.y = Math.PI*(i%2)
         material = new THREE.MeshLambertMaterial(color:colors[i%colors.length])
@@ -66,6 +66,7 @@ window.onload = ->
         teapot.rotation.y = Math.PI/2
         camera.add teapot
         scene.add camera
+
 
     wallMaterial = new THREE.MeshLambertMaterial(0xCCCCCC)
     wallMaterial.side = THREE.DoubleSide
@@ -75,6 +76,9 @@ window.onload = ->
     scene.add floor
     walls_data = []# [[[30, -250], [200, -400]],
                   #[250, -30], [80, -30]]]
+    for i in [0..4] by 1
+        walls_data.push([[-150+300*i,-800],[-150+300*i,-1300]])
+        walls_data.push([[-150+300*i,-100],[-150+300*i,400]])
     walls_vectors = ((new THREE.Vector2(point[0], point[1]) for point in wall) for wall in walls_data)
     walls = []
     for wall_line in walls_vectors
