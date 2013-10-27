@@ -151,8 +151,9 @@ window.onload = ->
                 console.log('Collision with', wall_line)
                 camera.position = old_position
         
-        for other_id,other_camera of cameras
-            if other_id == player_id
+        # FIXME other_id_
+        for other_id_,other_camera of cameras
+            if other_id_ == player_id
                 continue
 
             matrix = new THREE.Matrix4()
