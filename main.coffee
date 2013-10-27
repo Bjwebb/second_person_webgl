@@ -129,7 +129,7 @@ window.onload = ->
     animate = ->
         requestAnimationFrame animate
 
-        old_position = camera.position.clone()
+        old_position = cameras[player_id].position.clone()
 
         for k,camera of cameras
             for code,pressed of keyState[k]
