@@ -23,7 +23,7 @@ window.onload = ->
     NEAR = 0.1
     FAR = 10000
 
-    PLAYER_RADIUS = 100
+    PLAYER_RADIUS = 120
 
     # get the DOM element to attach to
     # - assume we've got jQuery to hand
@@ -57,7 +57,6 @@ window.onload = ->
     colors = [0xCC0000, 0x00CC00, 0x0000CC, 0xCCCC00, 0xCC00CC, 0x00CCCC]
 
     teapotGeometry = new THREE.TeapotGeometry(100, true, true, true, true, true)
-
     for camera,i in cameras
         material = new THREE.MeshLambertMaterial(color:colors[i%colors.length])
         teapot = new THREE.Mesh(teapotGeometry, material)
@@ -145,6 +144,13 @@ window.onload = ->
             if line_intersects_circ(wall_line[0], wall_line[1], new THREE.Vector2(camera.position.x, camera.position.z), PLAYER_RADIUS)
                 console.log('Collision with', wall_line)
                 camera.position = old_position
+        
+        for other_id,other_camera of cameras
+            if other_id == player_id
+                continue
+            if other_camera.position.clone().sub(camera.position).length() < PLAYER_RADIUS*2
+                console.log('Teapot collision')
+                camera.position = old_position
 
         for other_id,player_connection of player_connections
           player_connection.send(
@@ -197,14 +203,11 @@ closest_point_on_seg = (seg_a, seg_b, circ_cent) ->
     seg_v_unit = seg_v.clone().divideScalar(seg_v.length())
     proj = pt_v.dot(seg_v_unit)
     if proj <= 0
-        console.log('end1')
         return seg_a.clone()
     if proj >= seg_v.length()
-        console.log('end2')
         return seg_b.clone()
     proj_v = seg_v_unit.clone().multiplyScalar(proj)
     closest = proj_v.clone().add(seg_a)
-    console.log(closest)
     return closest
 
 line_intersects_circ = (seg_a, seg_b, circ_cent, r) ->
