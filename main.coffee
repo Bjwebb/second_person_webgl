@@ -4,6 +4,7 @@ window.onload = ->
     players[player_id] = undefined
     player_connections = {}
     scores = {}
+    keyState = {}
 
     peer = new Peer(player_id, {key: 'bt01ki4in04tpgb9', debug:3})
 
@@ -61,6 +62,7 @@ window.onload = ->
     teapotGeometry = new THREE.TeapotGeometry(100, true, true, true, true, true)
     resetCameraPositions = ->
         for camera,i in cameras
+            keyState[i] = { 90:false, 88:false, 37:false, 38:false, 39:false, 40:false }
             camera.position.x = 300*(Math.floor(i/2))
             camera.position.z = -900*(i%2)
             camera.rotation.y = Math.PI*(i%2)
@@ -118,8 +120,55 @@ window.onload = ->
     scene.add light2
 
     animate = ->
-      requestAnimationFrame animate
-      render()
+        requestAnimationFrame animate
+
+        camera = cameras[player_id]
+        old_position = camera.position.clone()
+
+        for code,pressed of keyState[player_id]
+            if pressed
+                code = parseInt(code)
+                switch code
+                    when 90 then camera.rotation.y += 0.1
+                    when 88 then camera.rotation.y -= 0.1
+                    when 37
+                        camera.position.x -= 10*Math.cos(camera.rotation.y)
+                        camera.position.z += 10*Math.sin(camera.rotation.y)
+                    when 38
+                        camera.position.x -= 10*Math.sin(camera.rotation.y)
+                        camera.position.z -= 10*Math.cos(camera.rotation.y)
+                    when 39
+                        camera.position.x += 10*Math.cos(camera.rotation.y)
+                        camera.position.z -= 10*Math.sin(camera.rotation.y)
+                    when 40
+                        camera.position.x += 10*Math.sin(camera.rotation.y)
+                        camera.position.z += 10*Math.cos(camera.rotation.y)
+
+        for wall_line in walls_vectors
+            if line_intersects_circ(wall_line[0], wall_line[1], new THREE.Vector2(camera.position.x, camera.position.z), PLAYER_RADIUS)
+                console.log('Collision with', wall_line)
+                camera.position = old_position
+        
+        for other_id,other_camera of cameras
+            if other_id == player_id
+                continue
+
+            matrix = new THREE.Matrix4()
+            matrix.extractRotation(camera.matrix)
+            direction = new THREE.Vector3(0, 0, 1)
+            direction.applyMatrix4(matrix)
+            if line_intersects_circ(
+                    new THREE.Vector2(other_camera.position.x, other_camera.position.z),
+                    new THREE.Vector2(other_camera.position.x+200*direction.x, other_camera.position.z+200*direction.z),
+                    new THREE.Vector2(camera.position.x, camera.position.z),
+                    PLAYER_RADIUS)
+                process_win(player_id)
+                process_lose(other_id)
+            if other_camera.position.clone().sub(camera.position).length() < PLAYER_RADIUS*2
+                console.log('Teapot collision')
+                camera.position = old_position
+
+        render()
 
     render = ->
       views_x = Math.ceil(Math.sqrt(cameras.length))
@@ -155,66 +204,43 @@ window.onload = ->
                 )
 
     process_lose = (id) ->
-        pass
+        null
 
     $(document).keydown (event) ->
-        camera = cameras[player_id]
-        old_position = camera.position.clone()
-        switch event.which
-            when 90 then camera.rotation.y += 0.1
-            when 88 then camera.rotation.y -= 0.1
-            when 37
-                camera.position.x -= 10*Math.cos(camera.rotation.y)
-                camera.position.z += 10*Math.sin(camera.rotation.y)
-            when 38
-                camera.position.x -= 10*Math.sin(camera.rotation.y)
-                camera.position.z -= 10*Math.cos(camera.rotation.y)
-            when 39
-                camera.position.x += 10*Math.cos(camera.rotation.y)
-                camera.position.z -= 10*Math.sin(camera.rotation.y)
-            when 40
-                camera.position.x += 10*Math.sin(camera.rotation.y)
-                camera.position.z += 10*Math.cos(camera.rotation.y)
+        if event.which of keyState[player_id]
+            keyState[player_id][event.which] = true
+        for other_id,player_connection of player_connections
+            player_connection.send(
+                event: 'keyState',
+                player_id: player_id,
+                player_keyState: keyState[player_id]
+            )
+
+    $(document).keyup (event) ->
+        if event.which of keyState[player_id]
+            keyState[player_id][event.which] = false
+        for other_id,player_connection of player_connections
+            player_connection.send(
+                event: 'keyState',
+                player_id: player_id,
+                player_keyState: keyState[player_id]
+            )
+            player_connection.send(
+                event: 'move',
+                player_id: player_id,
+                # FIXME
+                position_x: cameras[player_id].position.x,
+                position_y: cameras[player_id].position.y,
+                position_z: cameras[player_id].position.z,
+                rotation_x: cameras[player_id].rotation.x,
+                rotation_y: cameras[player_id].rotation.y,
+                rotation_z: cameras[player_id].rotation.z
+            )
+
     # the camera starts at 0,0,0 so pull it back
     #cameras[2].position.x = 300
     #cameras[3].rotation.x = -Math.PI/2
 
-        for wall_line in walls_vectors
-            if line_intersects_circ(wall_line[0], wall_line[1], new THREE.Vector2(camera.position.x, camera.position.z), PLAYER_RADIUS)
-                console.log('Collision with', wall_line)
-                camera.position = old_position
-        
-        for other_id,other_camera of cameras
-            if other_id == player_id
-                continue
-
-            matrix = new THREE.Matrix4()
-            matrix.extractRotation(camera.matrix)
-            direction = new THREE.Vector3(0, 0, 1)
-            direction.applyMatrix4(matrix)
-            if line_intersects_circ(
-                    new THREE.Vector2(other_camera.position.x, other_camera.position.z),
-                    new THREE.Vector2(other_camera.position.x+200*direction.x, other_camera.position.z+200*direction.z),
-                    new THREE.Vector2(camera.position.x, camera.position.z),
-                    PLAYER_RADIUS)
-                process_win(player_id)
-                process_lose(other_id)
-            if other_camera.position.clone().sub(camera.position).length() < PLAYER_RADIUS*2
-                console.log('Teapot collision')
-                camera.position = old_position
-
-        for other_id,player_connection of player_connections
-          player_connection.send(
-            event: 'move',
-            player_id: player_id,
-            # FIXME
-            position_x: cameras[player_id].position.x,
-            position_y: cameras[player_id].position.y,
-            position_z: cameras[player_id].position.z,
-            rotation_x: cameras[player_id].rotation.x,
-            rotation_y: cameras[player_id].rotation.y,
-            rotation_z: cameras[player_id].rotation.z
-          )
 
     peer.on('connection', (conn) ->
         console.log(conn)
