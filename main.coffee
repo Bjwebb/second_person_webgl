@@ -56,12 +56,13 @@ window.onload = ->
     renderer.setSize WIDTH, HEIGHT
 
     # attach the render-supplied DOM element
-    $container.append '<div style="position: absolute; float:left; font-size: 100px" id="scores"></div>'
+    $container.append '<div style="position: absolute; left: 0; font-size: 100px" id="scores"></div>'
+    $container.append '<div style="position: absolute; left: 0; top: 200px; font-size: 100px" id="msg"></div>'
     $container.append renderer.domElement
 
     # create the sphere's material
     colors = [0xCC0000, 0x00CC00, 0x0000CC, 0xCCCC00, 0xCC00CC, 0x00CCCC]
-    readable_names = ["RED", "GREEN", "BLUE", "YELLOW", "PURPLE"]
+    player_names = ["RED", "GREEN", "BLUE", "YELLOW", "PURPLE"]
     win_msg = "418 - You are a teapot."
     lose_msg = "What?! You think this is a game?"
 
@@ -149,15 +150,7 @@ window.onload = ->
                 rotation_z: cameras[player_id].rotation.z
             )
 
-
-    lastTime = 0
     animate = ->
-        timeNow = new Date().getTime()
-        elapsed = 0
-        if lastTime != 0
-            elapsed = timeNow - lastTime
-        lastTime = timeNow
-
         requestAnimationFrame animate
 
         old_position = cameras[player_id].position.clone()
@@ -166,22 +159,21 @@ window.onload = ->
             for code,pressed of keyState[k]
                 if pressed
                     code = parseInt(code)
-                    step = elapsed / 2
                     switch code
                         when 90 then camera.rotation.y += 0.1
                         when 88 then camera.rotation.y -= 0.1
                         when 37
-                            camera.position.x -= step*Math.cos(camera.rotation.y)
-                            camera.position.z += step*Math.sin(camera.rotation.y)
+                            camera.position.x -= 10*Math.cos(camera.rotation.y)
+                            camera.position.z += 10*Math.sin(camera.rotation.y)
                         when 38
-                            camera.position.x -= step*Math.sin(camera.rotation.y)
-                            camera.position.z -= step*Math.cos(camera.rotation.y)
+                            camera.position.x -= 10*Math.sin(camera.rotation.y)
+                            camera.position.z -= 10*Math.cos(camera.rotation.y)
                         when 39
-                            camera.position.x += step*Math.cos(camera.rotation.y)
-                            camera.position.z -= step*Math.sin(camera.rotation.y)
+                            camera.position.x += 10*Math.cos(camera.rotation.y)
+                            camera.position.z -= 10*Math.sin(camera.rotation.y)
                         when 40
-                            camera.position.x += step*Math.sin(camera.rotation.y)
-                            camera.position.z += step*Math.cos(camera.rotation.y)
+                            camera.position.x += 10*Math.sin(camera.rotation.y)
+                            camera.position.z += 10*Math.cos(camera.rotation.y)
 
         camera = cameras[player_id]
 
@@ -247,6 +239,7 @@ window.onload = ->
         $('#score'+id1).html scores[id1]
         scores[id2] -= 1
         $('#score'+id2).html scores[id2]
+        msg(player_names[id1] + ' drew with ' + player_names[id2])
         if not remote
             for other_id, player_connection of player_connections
                 player_connection.send(
@@ -262,6 +255,7 @@ window.onload = ->
         resetCameraPositions()
         scores[id] += 1
         $('#score'+id).html scores[id]
+        msg(player_names[id] + ' won')
         if not remote
             for other_id, player_connection of player_connections
                 player_connection.send(
@@ -271,9 +265,14 @@ window.onload = ->
         $('#teapour').get(0).currentTime = 0
         $('#teapour').get(0).play()
 
-    process_lose = (id) ->
-        $('#teapour').get(0).currentTime = 0
-        $('#teapour').get(0).play()
+    process_lose = (id, remote=false) ->
+        msg(player_names[id] + ' lost')
+        if not remote
+            for other_id, player_connection of player_connections
+                player_connection.send(
+                    event: 'lost',
+                    player_id: id,
+                )
 
     $(document).keydown (event) ->
         if event.which of keyState[player_id]
@@ -347,6 +346,8 @@ window.onload = ->
                     process_win(data.player_id, true)
                 when 'draw'
                     process_draw(data.id1, data.id2, true)
+                when 'lose'
+                    process_lose(data.player_id, true)
                 when 'keyState'
                     keyState[data.player_id] = data.player_keyState
         )
@@ -380,3 +381,6 @@ shivs = (camera, other_camera) ->
             new THREE.Vector2(other_camera.position.x+200*direction.x, other_camera.position.z+200*direction.z),
             new THREE.Vector2(camera.position.x, camera.position.z),
             PLAYER_RADIUS)
+
+msg = (str) ->
+    $('#msg').append($('<div></div>').html(str).delay(2000).fadeOut(1000, -> $(this).remove()))
