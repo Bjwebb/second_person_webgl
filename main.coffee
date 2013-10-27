@@ -59,6 +59,12 @@ window.onload = ->
     #cameras[2].position.x = 300
     #cameras[3].rotation.x = -Math.PI/2
     teapotGeometry = new THREE.TeapotGeometry(100, true, true, true, true, true)
+    resetCameraPositions = ->
+        for camera,i in cameras
+            camera.position.x = 300*(Math.floor(i/2))
+            camera.position.z = -900*(i%2)
+            camera.rotation.y = Math.PI*(i%2)
+    resetCameraPositions()
     for camera,i in cameras
         color = colors[i%colors.length]
         hex = color.toString(16)
@@ -66,9 +72,6 @@ window.onload = ->
         scores[i] = 0
         $('#scores').append('<span id="score'+i+'" style="color: #'+hex+'">0</div>')
 
-        camera.position.x = 300*(Math.floor(i/2))
-        camera.position.z = -900*(i%2)
-        camera.rotation.y = Math.PI*(i%2)
         material = new THREE.MeshLambertMaterial(color:color)
         teapot = new THREE.Mesh(teapotGeometry, material)
         teapot.rotation.y = Math.PI/2
@@ -126,6 +129,8 @@ window.onload = ->
       if (has_webgl)
           renderer.enableScissorTest(true)
       for camera,i in cameras
+          if i == parseInt(player_id)
+              continue
           x = i%views_x
           y = Math.floor(i/views_x)
           camera.aspect = view_width/view_height
@@ -138,13 +143,19 @@ window.onload = ->
           renderer.render scene, camera
           #camera.traverse (object) -> object.visible = true
 
-    process_win = (id) ->
+    process_win = (id, remote=false) ->
+        resetCameraPositions()
         scores[id] += 1
         $('#score'+id).html scores[id]
+        if not remote
+            for other_id,player_connection of player_connections
+                player_connection.send(
+                  event: 'win',
+                  player_id: id,
+                )
 
     process_lose = (id) ->
-        scores[id] -= 1
-        $('#score'+id).html scores[id]
+        pass
 
     $(document).keydown (event) ->
         camera = cameras[player_id]
@@ -231,6 +242,8 @@ window.onload = ->
                 when 'players'
                     for k,v of data.players
                         players[k] = v
+                when 'win'
+                    process_win(data.player_id, true)
         )
 
 
