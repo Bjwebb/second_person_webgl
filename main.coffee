@@ -129,27 +129,29 @@ window.onload = ->
     animate = ->
         requestAnimationFrame animate
 
-        camera = cameras[player_id]
         old_position = camera.position.clone()
 
-        for code,pressed of keyState[player_id]
-            if pressed
-                code = parseInt(code)
-                switch code
-                    when 90 then camera.rotation.y += 0.1
-                    when 88 then camera.rotation.y -= 0.1
-                    when 37
-                        camera.position.x -= 10*Math.cos(camera.rotation.y)
-                        camera.position.z += 10*Math.sin(camera.rotation.y)
-                    when 38
-                        camera.position.x -= 10*Math.sin(camera.rotation.y)
-                        camera.position.z -= 10*Math.cos(camera.rotation.y)
-                    when 39
-                        camera.position.x += 10*Math.cos(camera.rotation.y)
-                        camera.position.z -= 10*Math.sin(camera.rotation.y)
-                    when 40
-                        camera.position.x += 10*Math.sin(camera.rotation.y)
-                        camera.position.z += 10*Math.cos(camera.rotation.y)
+        for k,camera of cameras
+            for code,pressed of keyState[k]
+                if pressed
+                    code = parseInt(code)
+                    switch code
+                        when 90 then camera.rotation.y += 0.1
+                        when 88 then camera.rotation.y -= 0.1
+                        when 37
+                            camera.position.x -= 10*Math.cos(camera.rotation.y)
+                            camera.position.z += 10*Math.sin(camera.rotation.y)
+                        when 38
+                            camera.position.x -= 10*Math.sin(camera.rotation.y)
+                            camera.position.z -= 10*Math.cos(camera.rotation.y)
+                        when 39
+                            camera.position.x += 10*Math.cos(camera.rotation.y)
+                            camera.position.z -= 10*Math.sin(camera.rotation.y)
+                        when 40
+                            camera.position.x += 10*Math.sin(camera.rotation.y)
+                            camera.position.z += 10*Math.cos(camera.rotation.y)
+
+        camera = cameras[player_id]
 
         for wall_line in walls_vectors
             if line_intersects_circ(wall_line[0], wall_line[1], new THREE.Vector2(camera.position.x, camera.position.z), PLAYER_RADIUS)
@@ -286,6 +288,8 @@ window.onload = ->
                         players[k] = v
                 when 'win'
                     process_win(data.player_id, true)
+                when 'keyState'
+                    keyState[data.player_id] = data.player_keyState
         )
 
     # draw!
