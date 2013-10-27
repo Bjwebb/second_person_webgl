@@ -174,6 +174,8 @@ window.onload = ->
                     PLAYER_RADIUS)
                 process_win(player_id)
                 process_lose(other_id)
+                $('#teapour').get(0).currentTime = 0
+                $('#teapour').get(0).play()
             if other_camera.position.clone().sub(camera.position).length() < PLAYER_RADIUS*2
                 console.log('Teapot collision')
                 camera.position = old_position
