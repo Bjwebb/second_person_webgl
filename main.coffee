@@ -23,7 +23,7 @@ window.onload = ->
     NEAR = 0.1
     FAR = 10000
 
-    PLAYER_RADIUS = 70
+    PLAYER_RADIUS = 100
 
     # get the DOM element to attach to
     # - assume we've got jQuery to hand
@@ -56,16 +56,13 @@ window.onload = ->
     # create the sphere's material
     colors = [0xCC0000, 0x00CC00, 0x0000CC, 0xCCCC00, 0xCC00CC, 0x00CCCC]
 
-    cubeGeometry = new THREE.CubeGeometry(100, 100, 100)
-    lanceGeometry = new THREE.CubeGeometry(3, 3, 100)
+    teapotGeometry = new THREE.TeapotGeometry(100, true, true, true, true, true)
 
     for camera,i in cameras
         material = new THREE.MeshLambertMaterial(color:colors[i%colors.length])
-        cube = new THREE.Mesh(cubeGeometry, material)
-        lance = new THREE.Mesh(lanceGeometry, material)
-        lance.position.z = -100
-        cube.add lance
-        camera.add cube
+        teapot = new THREE.Mesh(teapotGeometry, material)
+        teapot.rotation.y = Math.PI/2
+        camera.add teapot
         scene.add camera
 
     wallMaterial = new THREE.MeshLambertMaterial(0xCCCCCC)
@@ -74,21 +71,21 @@ window.onload = ->
     floor.rotation.x = -Math.PI/2
     floor.position.y = -100
     scene.add floor
-    walls_data = [[[30, -250], [200, -400]],
-                  [[250, -30], [80, -30]]]
+    walls_data = [[[30, -250], [200, -400]]]#,
+                  #[[250, -30], [80, -30]]]
     walls_vectors = ((new THREE.Vector2(point[0], point[1]) for point in wall) for wall in walls_data)
     walls = []
     for wall_line in walls_vectors
         dir_vec = wall_line[1].clone().sub(wall_line[0])
-        mid = wall_line[0].lerp(wall_line[1], 0.5)
+        mid = wall_line[0].clone().lerp(wall_line[1], 0.5)
         console.log(wall_line, dir_vec)
         console.log(dir_vec.length())
 
         wall = new THREE.Mesh(new THREE.PlaneGeometry(dir_vec.length(), 500), wallMaterial)
-        wall.rotation.y = Math.atan(dir_vec.y / dir_vec.x)
+        wall.rotation.y = - Math.atan(dir_vec.y / dir_vec.x)
         wall.position.x = mid.x
         wall.position.z = mid.y
-        console.log('on and on just another wall in the', wall);
+        console.log('on and on just another wall in the', wall)
         scene.add wall
         walls.push wall
 
@@ -200,11 +197,14 @@ closest_point_on_seg = (seg_a, seg_b, circ_cent) ->
     seg_v_unit = seg_v.clone().divideScalar(seg_v.length())
     proj = pt_v.dot(seg_v_unit)
     if proj <= 0
+        console.log('end1')
         return seg_a.clone()
     if proj >= seg_v.length()
+        console.log('end2')
         return seg_b.clone()
     proj_v = seg_v_unit.clone().multiplyScalar(proj)
     closest = proj_v.clone().add(seg_a)
+    console.log(closest)
     return closest
 
 line_intersects_circ = (seg_a, seg_b, circ_cent, r) ->
