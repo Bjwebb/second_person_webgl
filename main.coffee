@@ -54,10 +54,14 @@ window.onload = ->
     colors = [0xCC0000, 0x00CC00, 0x0000CC, 0xCCCC00, 0xCC00CC, 0x00CCCC]
 
     cubeGeometry = new THREE.CubeGeometry(100, 100, 100)
+    lanceGeometry = new THREE.CubeGeometry(3, 3, 100)
 
     for camera,i in cameras
         material = new THREE.MeshLambertMaterial(color:colors[i%colors.length])
         cube = new THREE.Mesh(cubeGeometry, material)
+        lance = new THREE.Mesh(lanceGeometry, material)
+        lance.position.z = -100
+        cube.add lance
         camera.add cube
         scene.add camera
 
@@ -77,16 +81,16 @@ window.onload = ->
         walls.push wall
 
 
-    # create a point light
-    pointLight = new THREE.PointLight(0xFFFFFF)
-
-    # set its position
-    pointLight.position.x = 10
-    pointLight.position.y = 50
-    pointLight.position.z = 130
-
-    # add to the scene
-    scene.add pointLight
+    light = new THREE.PointLight(0xFFFFFF)
+    light.position.x = 10
+    light.position.y = 50
+    light.position.z = 130
+    scene.add light
+    light2 = new THREE.PointLight(0xFFFFFF)
+    light2.position.x = -10
+    light2.position.y = 50
+    light2.position.z = -130
+    scene.add light2
 
     animate = ->
       requestAnimationFrame animate
