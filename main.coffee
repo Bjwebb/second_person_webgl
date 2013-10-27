@@ -22,13 +22,16 @@ window.onload = ->
     NEAR = 0.1
     FAR = 10000
 
+    PLAYER_RADIUS = 100
+
     # get the DOM element to attach to
     # - assume we've got jQuery to hand
     $container = $("#container")
 
     # create a WebGL renderer, camera
     # and a scene
-    renderer = new THREE.WebGLRenderer()
+    has_webgl = document.createElement('canvas').getContext('webgl')
+    renderer = if (has_webgl) then new THREE.WebGLRenderer() else new THREE.CanvasRenderer()
     cameras = [
         new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR),
         new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR),
@@ -66,15 +69,23 @@ window.onload = ->
     floor.rotation.x = -Math.PI/2
     floor.position.y = -100
     scene.add floor
-    walls_data = [ [ 0, -100 ] ]
+    walls_data = [[[30, -250], [200, -400]],
+                  [[250, -30], [80, -30]]]
+    walls_vectors = ((new THREE.Vector2(point[0], point[1]) for point in wall) for wall in walls_data)
     walls = []
-    for wall_data in walls_data
-        wall = new THREE.Mesh(new THREE.PlaneGeometry(100, 500), wallMaterial)
-        wall.position.x = wall_data[0]
-        wall.position.z = wall_data[1]
+    for wall_line in walls_vectors
+        dir_vec = wall_line[1].clone().sub(wall_line[0])
+        mid = wall_line[0].lerp(wall_line[1], 0.5)
+        console.log(wall_line, dir_vec)
+        console.log(dir_vec.length())
+
+        wall = new THREE.Mesh(new THREE.PlaneGeometry(dir_vec.length(), 500), wallMaterial)
+        wall.rotation.y = Math.atan(dir_vec.y / dir_vec.x)
+        wall.position.x = mid.x
+        wall.position.z = mid.y
+        console.log('on and on just another wall in the', wall);
         scene.add wall
         walls.push wall
-
 
     # create a point light
     pointLight = new THREE.PointLight(0xFFFFFF)
@@ -91,21 +102,22 @@ window.onload = ->
       requestAnimationFrame animate
       render()
 
-
     render = ->
       views_x = Math.ceil(Math.sqrt(cameras.length))
       views_y = views_x
       view_width = WIDTH/views_x
       view_height = HEIGHT/views_y
-      renderer.enableScissorTest(true)
+      if (has_webgl)
+          renderer.enableScissorTest(true)
       for camera,i in cameras
           x = i%views_x
           y = Math.floor(i/views_y)
           camera.aspect = view_width/view_height
           # FIXME don't do this every frame
           camera.updateProjectionMatrix()
-          renderer.setViewport(x*view_width, y*view_height, view_width, view_height)
-          renderer.setScissor(x*view_width, y*view_height, view_width, view_height)
+          if (has_webgl)
+            renderer.setViewport(x*view_width, y*view_height, view_width, view_height)
+            renderer.setScissor(x*view_width, y*view_height, view_width, view_height)
           renderer.render scene, camera
 
     $(document).keydown (event) ->
@@ -127,46 +139,60 @@ window.onload = ->
             when 40
                 camera.position.x += 10*Math.sin(camera.rotation.y)
                 camera.position.z += 10*Math.cos(camera.rotation.y)
-        console.log 'a'
-        console.log walls
-        if false # if collision
-            camera.position = old_position
-            camera.rotation = old_rotation
+        for wall_line in walls_vectors
+            if line_intersects_circ(wall_line[0], wall_line[1], new THREE.Vector2(camera.position.x, camera.position.z), PLAYER_RADIUS)
+                console.log('Collision with', wall_line)
+                camera.position = old_position
+                camera.rotation = old_rotation
 
-      console.log(other_conn)
-      if other_conn
-        other_conn.send(
-          event: 'move',
-          # FIXME
-          position_x: cameras[player_id].position.x,
-          position_y: cameras[player_id].position.y,
-          position_z: cameras[player_id].position.z,
-          rotation_x: cameras[player_id].rotation.x,
-          rotation_y: cameras[player_id].rotation.y,
-          rotation_z: cameras[player_id].rotation.z,
-        )
+        if other_conn
+            other_conn.send(
+                event: 'move',
+                # FIXME
+                position_x: cameras[player_id].position.x,
+                position_y: cameras[player_id].position.y,
+                position_z: cameras[player_id].position.z,
+                rotation_x: cameras[player_id].rotation.x,
+                rotation_y: cameras[player_id].rotation.y,
+                rotation_z: cameras[player_id].rotation.z,
+            )
 
     peer.on('connection', (conn) ->
-      other_conn = conn
-      setup_other_conn()
+        other_conn = conn
+        setup_other_conn()
     )
 
     
     # FIXME
     setup_other_conn = ->
-      other_conn.on('data', (data) ->
-        console.log(data)
-        switch data.event
-          when 'move'
-            cameras[other_id].position.x = data.position_x
-            cameras[other_id].position.y = data.position_y
-            cameras[other_id].position.z = data.position_z
-            cameras[other_id].rotation.x = data.rotation_x
-            cameras[other_id].rotation.y = data.rotation_y
-            cameras[other_id].rotation.z = data.rotation_z
-      )
+        other_conn.on('data', (data) ->
+            console.log(data)
+            switch data.event
+                when 'move'
+                    cameras[other_id].position.x = data.position_x
+                    cameras[other_id].position.y = data.position_y
+                    cameras[other_id].position.z = data.position_z
+                    cameras[other_id].rotation.x = data.rotation_x
+                    cameras[other_id].rotation.y = data.rotation_y
+                    cameras[other_id].rotation.z = data.rotation_z
+        )
 
 
     # draw!
     animate()
  
+closest_point_on_seg = (seg_a, seg_b, circ_cent) ->
+    seg_v = seg_b.clone().sub(seg_a)
+    pt_v = circ_cent.clone().sub(seg_a)
+    seg_v_unit = seg_v.clone().divideScalar(seg_v.length())
+    proj = pt_v.dot(seg_v_unit)
+    if proj <= 0
+        return seg_a.clone()
+    if proj >= seg_v.length()
+        return seg_b.clone()
+    proj_v = seg_v_unit.clone().multiplyScalar(proj)
+    closest = proj_v.clone().add(seg_a)
+    return closest
+
+line_intersects_circ = (seg_a, seg_b, circ_cent, r) ->
+    circ_cent.clone().sub(closest_point_on_seg(seg_a, seg_b, circ_cent)).length() <= r
