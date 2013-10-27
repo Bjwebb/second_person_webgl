@@ -126,6 +126,27 @@ window.onload = ->
     light2.position.z = -130
     scene.add light2
 
+    stop = ->
+        # FIMXE duplication
+        #keyState[player_id] = { see below }
+        for other_id,player_connection of player_connections
+            player_connection.send(
+                event: 'keyState',
+                player_id: player_id,
+                player_keyState: { 90:false, 88:false, 37:false, 38:false, 39:false, 40:false }
+            )
+            player_connection.send(
+                event: 'move',
+                player_id: player_id,
+                # FIXME
+                position_x: cameras[player_id].position.x,
+                position_y: cameras[player_id].position.y,
+                position_z: cameras[player_id].position.z,
+                rotation_x: cameras[player_id].rotation.x,
+                rotation_y: cameras[player_id].rotation.y,
+                rotation_z: cameras[player_id].rotation.z
+            )
+
     animate = ->
         requestAnimationFrame animate
 
@@ -157,6 +178,7 @@ window.onload = ->
             if line_intersects_circ(wall_line[0], wall_line[1], new THREE.Vector2(camera.position.x, camera.position.z), PLAYER_RADIUS)
                 console.log('Collision with', wall_line)
                 camera.position = old_position
+                stop()
         
         # FIXME other_id_
         for other_id_,other_camera of cameras
@@ -179,6 +201,7 @@ window.onload = ->
             if other_camera.position.clone().sub(camera.position).length() < PLAYER_RADIUS*2
                 console.log('Teapot collision')
                 camera.position = old_position
+                stop()
 
         render()
 
@@ -223,34 +246,35 @@ window.onload = ->
 
     $(document).keydown (event) ->
         if event.which of keyState[player_id]
-            keyState[player_id][event.which] = true
-        for other_id,player_connection of player_connections
-            player_connection.send(
-                event: 'keyState',
-                player_id: player_id,
-                player_keyState: keyState[player_id]
-            )
+            if not keyState[player_id][event.which]
+                keyState[player_id][event.which] = true
+                for other_id,player_connection of player_connections
+                    player_connection.send(
+                        event: 'keyState',
+                        player_id: player_id,
+                        player_keyState: keyState[player_id]
+                    )
 
     $(document).keyup (event) ->
         if event.which of keyState[player_id]
             keyState[player_id][event.which] = false
-        for other_id,player_connection of player_connections
-            player_connection.send(
-                event: 'keyState',
-                player_id: player_id,
-                player_keyState: keyState[player_id]
-            )
-            player_connection.send(
-                event: 'move',
-                player_id: player_id,
-                # FIXME
-                position_x: cameras[player_id].position.x,
-                position_y: cameras[player_id].position.y,
-                position_z: cameras[player_id].position.z,
-                rotation_x: cameras[player_id].rotation.x,
-                rotation_y: cameras[player_id].rotation.y,
-                rotation_z: cameras[player_id].rotation.z
-            )
+            for other_id,player_connection of player_connections
+                player_connection.send(
+                    event: 'keyState',
+                    player_id: player_id,
+                    player_keyState: keyState[player_id]
+                )
+                player_connection.send(
+                    event: 'move',
+                    player_id: player_id,
+                    # FIXME
+                    position_x: cameras[player_id].position.x,
+                    position_y: cameras[player_id].position.y,
+                    position_z: cameras[player_id].position.z,
+                    rotation_x: cameras[player_id].rotation.x,
+                    rotation_y: cameras[player_id].rotation.y,
+                    rotation_z: cameras[player_id].rotation.z
+                )
 
     # the camera starts at 0,0,0 so pull it back
     #cameras[2].position.x = 300
