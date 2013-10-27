@@ -55,6 +55,9 @@ window.onload = ->
 
     # create the sphere's material
     colors = [0xCC0000, 0x00CC00, 0x0000CC, 0xCCCC00, 0xCC00CC, 0x00CCCC]
+    readable_names = ["RED", "GREEN", "BLUE", "YELLOW", "PURPLE"
+    win_msg = "418 - You are a teapot."
+    lose_msg = "What?! You think this is a game?"
 
     # the camera starts at 0,0,0 so pull it back
     #cameras[2].position.x = 300
