@@ -196,17 +196,19 @@ window.onload = ->
             if other_id_ == player_id
                 continue
 
-            shivver = shivs(camera, other_camera)
-            shivved = shivs(other_camera, camera)
-            if (player_id < other_id)
+            if (player_id < other_id_)
+                shivver = shivs(camera, other_camera)
+                shivved = shivs(other_camera, camera)
+                console.log(shivver, shivved)
                 if shivver and shivved
-                    process_draw(player_id, other_id)
+                    process_draw(player_id, other_id_)
                 else if shivver
                     process_win(player_id)
-                    process_lose(other_id)
+                    process_lose(other_id_)
                 else if shivved
-                    process_win(other_id)
-                    process_lose(camera)
+                    process_win(other_id_)
+                    process_lose(player_id)
+
             if other_camera.position.clone().sub(camera.position).length() < PLAYER_RADIUS*2
                 console.log('Teapot collision')
                 camera.position = old_position
