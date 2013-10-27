@@ -1,17 +1,17 @@
 window.onload = ->
-    if (location.hash != '#0' && location.hash != '#1')
-        alert("Pick a player!")
-    
     player_id = location.hash.slice(1)
     players = { }
     players[player_id] = undefined
-    other_id = if (player_id == "0") then "1" else "0"
-    
+    player_connections = {}
+
     peer = new Peer(player_id, {key: 'bt01ki4in04tpgb9', debug:3})
-    other_conn = null
-    peer.on 'open', ->
-        other_conn = peer.connect(other_id)
-        setup_other_conn()
+
+    if player_id != "0"
+        other_id = "0"
+        player_connections[other_id] = null
+        peer.on 'open', ->
+            player_connections[other_id] = peer.connect(other_id)
+            setup_other_conn(other_id)
 
     # set the scene size
     WIDTH = window.innerWidth
@@ -132,9 +132,10 @@ window.onload = ->
             camera.position = old_position
             camera.rotation = old_rotation
 
-        if other_conn
-          other_conn.send(
+        for other_id,player_connection of player_connections
+          player_connection.send(
             event: 'move',
+            player_id: player_id,
             # FIXME
             position_x: cameras[player_id].position.x,
             position_y: cameras[player_id].position.y,
@@ -145,27 +146,28 @@ window.onload = ->
           )
 
     peer.on('connection', (conn) ->
-      other_conn = conn
-      setup_other_conn()
+        console.log(conn)
+        player_connections[conn.peer] = conn
+        setup_other_conn(conn.peer)
     )
 
     
     # FIXME
-    setup_other_conn = ->
-        other_conn.on 'open', ->
-          other_conn.send(
-              event: 'players',
-              players: players
-          )
-        other_conn.on('data', (data) ->
+    setup_other_conn = (other_id) ->
+        player_connections[other_id].on 'open', ->
+            player_connections[other_id].send(
+                event: 'players',
+                players: players
+            )
+        player_connections[other_id].on('data', (data) ->
             switch data.event
                 when 'move'
-                    cameras[other_id].position.x = data.position_x
-                    cameras[other_id].position.y = data.position_y
-                    cameras[other_id].position.z = data.position_z
-                    cameras[other_id].rotation.x = data.rotation_x
-                    cameras[other_id].rotation.y = data.rotation_y
-                    cameras[other_id].rotation.z = data.rotation_z
+                    cameras[data.player_id].position.x = data.position_x
+                    cameras[data.player_id].position.y = data.position_y
+                    cameras[data.player_id].position.z = data.position_z
+                    cameras[data.player_id].rotation.x = data.rotation_x
+                    cameras[data.player_id].rotation.y = data.rotation_y
+                    cameras[data.player_id].rotation.z = data.rotation_z
                 when 'players'
                     for k,v of data.players
                         players[k] = v
