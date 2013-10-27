@@ -1,17 +1,19 @@
 window.onload = ->
-    player_id = location.hash.slice(1)
+    player_id_full = location.hash.slice(1)
+    id_prefix = player_id_full.split('_')[0]
+    player_id = player_id_full.split('_')[1]
     players = { }
     players[player_id] = undefined
     player_connections = {}
     scores = {}
     keyState = {}
 
-    peer = new Peer(player_id, {key: 'bt01ki4in04tpgb9', debug:3})
+    peer = new Peer(player_id_full, {key: 'bt01ki4in04tpgb9', debug:3})
 
     if player_id != "0"
         other_id = "0"
         peer.on 'open', ->
-            player_connections[other_id] = peer.connect(other_id)
+            player_connections[other_id] = peer.connect(id_prefix+'_'+other_id)
             setup_other_conn(other_id)
 
     # set the scene size
@@ -252,7 +254,7 @@ window.onload = ->
 
     peer.on('connection', (conn) ->
         console.log(conn)
-        player_connections[conn.peer] = conn
+        player_connections[conn.peer.split('_')[1]] = conn
         setup_other_conn(conn.peer)
     )
 
