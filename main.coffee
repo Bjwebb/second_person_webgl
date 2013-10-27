@@ -1,16 +1,17 @@
-
 window.onload = ->
-    if (location.hash != '#0' && location.hash != '#1')
-        alert("Pick a player!");
-    
     player_id = location.hash.slice(1)
-    other_id = if (player_id == "0") then "1" else "0"
-    
+    players = { }
+    players[player_id] = undefined
+    player_connections = {}
+
     peer = new Peer(player_id, {key: 'bt01ki4in04tpgb9', debug:3})
-    other_conn = undefined
-    peer.on 'open', ->
-        other_conn = peer.connect(other_id)
-        setup_other_conn()
+
+    if player_id != "0"
+        other_id = "0"
+        player_connections[other_id] = null
+        peer.on 'open', ->
+            player_connections[other_id] = peer.connect(other_id)
+            setup_other_conn(other_id)
 
     # set the scene size
     WIDTH = window.innerWidth
@@ -56,15 +57,19 @@ window.onload = ->
     colors = [0xCC0000, 0x00CC00, 0x0000CC, 0xCCCC00, 0xCC00CC, 0x00CCCC]
 
     cubeGeometry = new THREE.CubeGeometry(100, 100, 100)
+    lanceGeometry = new THREE.CubeGeometry(3, 3, 100)
 
     for camera,i in cameras
         material = new THREE.MeshLambertMaterial(color:colors[i%colors.length])
         cube = new THREE.Mesh(cubeGeometry, material)
+        lance = new THREE.Mesh(lanceGeometry, material)
+        lance.position.z = -100
+        cube.add lance
         camera.add cube
         scene.add camera
 
     wallMaterial = new THREE.MeshLambertMaterial(0xCCCCCC)
-    #wallMaterial.side = THREE.DoubleSide
+    wallMaterial.side = THREE.DoubleSide
     floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), wallMaterial)
     floor.rotation.x = -Math.PI/2
     floor.position.y = -100
@@ -87,16 +92,16 @@ window.onload = ->
         scene.add wall
         walls.push wall
 
-    # create a point light
-    pointLight = new THREE.PointLight(0xFFFFFF)
-
-    # set its position
-    pointLight.position.x = 10
-    pointLight.position.y = 50
-    pointLight.position.z = 130
-
-    # add to the scene
-    scene.add pointLight
+    light = new THREE.PointLight(0xFFFFFF)
+    light.position.x = 10
+    light.position.y = 50
+    light.position.z = 130
+    scene.add light
+    light2 = new THREE.PointLight(0xFFFFFF)
+    light2.position.x = -10
+    light2.position.y = 50
+    light2.position.z = -130
+    scene.add light2
 
     animate = ->
       requestAnimationFrame animate
@@ -139,42 +144,52 @@ window.onload = ->
             when 40
                 camera.position.x += 10*Math.sin(camera.rotation.y)
                 camera.position.z += 10*Math.cos(camera.rotation.y)
+
         for wall_line in walls_vectors
             if line_intersects_circ(wall_line[0], wall_line[1], new THREE.Vector2(camera.position.x, camera.position.z), PLAYER_RADIUS)
                 console.log('Collision with', wall_line)
                 camera.position = old_position
                 camera.rotation = old_rotation
 
-        if other_conn
-            other_conn.send(
-                event: 'move',
-                # FIXME
-                position_x: cameras[player_id].position.x,
-                position_y: cameras[player_id].position.y,
-                position_z: cameras[player_id].position.z,
-                rotation_x: cameras[player_id].rotation.x,
-                rotation_y: cameras[player_id].rotation.y,
-                rotation_z: cameras[player_id].rotation.z,
-            )
+        for other_id,player_connection of player_connections
+          player_connection.send(
+            event: 'move',
+            player_id: player_id,
+            # FIXME
+            position_x: cameras[player_id].position.x,
+            position_y: cameras[player_id].position.y,
+            position_z: cameras[player_id].position.z,
+            rotation_x: cameras[player_id].rotation.x,
+            rotation_y: cameras[player_id].rotation.y,
+            rotation_z: cameras[player_id].rotation.z
+          )
 
     peer.on('connection', (conn) ->
-        other_conn = conn
-        setup_other_conn()
+        console.log(conn)
+        player_connections[conn.peer] = conn
+        setup_other_conn(conn.peer)
     )
 
     
     # FIXME
-    setup_other_conn = ->
-        other_conn.on('data', (data) ->
-            console.log(data)
+    setup_other_conn = (other_id) ->
+        player_connections[other_id].on 'open', ->
+            player_connections[other_id].send(
+                event: 'players',
+                players: players
+            )
+        player_connections[other_id].on('data', (data) ->
             switch data.event
                 when 'move'
-                    cameras[other_id].position.x = data.position_x
-                    cameras[other_id].position.y = data.position_y
-                    cameras[other_id].position.z = data.position_z
-                    cameras[other_id].rotation.x = data.rotation_x
-                    cameras[other_id].rotation.y = data.rotation_y
-                    cameras[other_id].rotation.z = data.rotation_z
+                    cameras[data.player_id].position.x = data.position_x
+                    cameras[data.player_id].position.y = data.position_y
+                    cameras[data.player_id].position.z = data.position_z
+                    cameras[data.player_id].rotation.x = data.rotation_x
+                    cameras[data.player_id].rotation.y = data.rotation_y
+                    cameras[data.player_id].rotation.z = data.rotation_z
+                when 'players'
+                    for k,v of data.players
+                        players[k] = v
         )
 
 
