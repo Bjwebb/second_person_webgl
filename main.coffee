@@ -10,7 +10,6 @@ window.onload = ->
 
     if player_id != "0"
         other_id = "0"
-        player_connections[other_id] = null
         peer.on 'open', ->
             player_connections[other_id] = peer.connect(other_id)
             setup_other_conn(other_id)
@@ -55,7 +54,7 @@ window.onload = ->
 
     # create the sphere's material
     colors = [0xCC0000, 0x00CC00, 0x0000CC, 0xCCCC00, 0xCC00CC, 0x00CCCC]
-    readable_names = ["RED", "GREEN", "BLUE", "YELLOW", "PURPLE"
+    readable_names = ["RED", "GREEN", "BLUE", "YELLOW", "PURPLE"]
     win_msg = "418 - You are a teapot."
     lose_msg = "What?! You think this is a game?"
 
