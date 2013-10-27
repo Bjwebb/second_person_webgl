@@ -62,7 +62,7 @@ window.onload = ->
 
     # create the sphere's material
     colors = [0xCC0000, 0x00CC00, 0x0000CC, 0xCCCC00, 0xCC00CC, 0x00CCCC]
-    player_names = ["RED", "GREEN", "BLUE", "YELLOW", "PURPLE"]
+    player_names = ["RED", "GREEN", "BLUE", "YELLOW", "PURPLE", "CYAN"]
     win_msg = "418 - You are a teapot."
     lose_msg = "What?! You think this is a game?"
 
@@ -191,7 +191,6 @@ window.onload = ->
             if (player_id < other_id_)
                 shivver = shivs(camera, other_camera)
                 shivved = shivs(other_camera, camera)
-                console.log(shivver, shivved)
                 if shivver and shivved
                     process_draw(player_id, other_id_)
                 else if shivver
