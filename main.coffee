@@ -18,12 +18,12 @@ window.onload = ->
     HEIGHT = window.innerHeight
 
     # set some camera attributes
-    VIEW_ANGLE = 45
+    VIEW_ANGLE = 70
     ASPECT = 1 #Temporary, reset below
-    NEAR = 0.1
+    NEAR = 100
     FAR = 10000
 
-    PLAYER_RADIUS = 120
+    PLAYER_RADIUS = 110
 
     # get the DOM element to attach to
     # - assume we've got jQuery to hand
@@ -37,15 +37,12 @@ window.onload = ->
         new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR),
         new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR),
         new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR),
+        new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR),
+        new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR),
         new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR)
         ]
     scene = new THREE.Scene()
 
-    # the camera starts at 0,0,0 so pull it back
-    cameras[1].position.z = 300
-    cameras[2].position.x = 300
-    cameras[3].position.y = 1000
-    cameras[3].rotation.x = -Math.PI/2
 
     # start the renderer
     renderer.setSize WIDTH, HEIGHT
@@ -56,8 +53,14 @@ window.onload = ->
     # create the sphere's material
     colors = [0xCC0000, 0x00CC00, 0x0000CC, 0xCCCC00, 0xCC00CC, 0x00CCCC]
 
+    # the camera starts at 0,0,0 so pull it back
+    #cameras[2].position.x = 300
+    #cameras[3].rotation.x = -Math.PI/2
     teapotGeometry = new THREE.TeapotGeometry(100, true, true, true, true, true)
     for camera,i in cameras
+        camera.position.x = 300*(i/2)
+        camera.position.z = -900*(i%2)
+        camera.rotation.y = Math.PI*(i%2)
         material = new THREE.MeshLambertMaterial(color:colors[i%colors.length])
         teapot = new THREE.Mesh(teapotGeometry, material)
         teapot.rotation.y = Math.PI/2
@@ -70,8 +73,8 @@ window.onload = ->
     floor.rotation.x = -Math.PI/2
     floor.position.y = -100
     scene.add floor
-    walls_data = [[[30, -250], [200, -400]]]#,
-                  #[[250, -30], [80, -30]]]
+    walls_data = []# [[[30, -250], [200, -400]],
+                  #[250, -30], [80, -30]]]
     walls_vectors = ((new THREE.Vector2(point[0], point[1]) for point in wall) for wall in walls_data)
     walls = []
     for wall_line in walls_vectors
@@ -105,21 +108,24 @@ window.onload = ->
 
     render = ->
       views_x = Math.ceil(Math.sqrt(cameras.length))
-      views_y = views_x
+      views_y = if (views_x-1)*views_x >= cameras.length then views_x-1 else views_x
+      console.log(views_x, views_y, cameras.length)
       view_width = WIDTH/views_x
       view_height = HEIGHT/views_y
       if (has_webgl)
           renderer.enableScissorTest(true)
       for camera,i in cameras
           x = i%views_x
-          y = Math.floor(i/views_y)
+          y = Math.floor(i/views_x)
           camera.aspect = view_width/view_height
           # FIXME don't do this every frame
           camera.updateProjectionMatrix()
           if (has_webgl)
-            renderer.setViewport(x*view_width, y*view_height, view_width, view_height)
-            renderer.setScissor(x*view_width, y*view_height, view_width, view_height)
+              renderer.setViewport(x*view_width, y*view_height, view_width, view_height)
+              renderer.setScissor(x*view_width, y*view_height, view_width, view_height)
+          #camera.traverse (object) -> object.visible = false
           renderer.render scene, camera
+          #camera.traverse (object) -> object.visible = true
 
     $(document).keydown (event) ->
         camera = cameras[player_id]
@@ -139,6 +145,9 @@ window.onload = ->
             when 40
                 camera.position.x += 10*Math.sin(camera.rotation.y)
                 camera.position.z += 10*Math.cos(camera.rotation.y)
+    # the camera starts at 0,0,0 so pull it back
+    #cameras[2].position.x = 300
+    #cameras[3].rotation.x = -Math.PI/2
 
         for wall_line in walls_vectors
             if line_intersects_circ(wall_line[0], wall_line[1], new THREE.Vector2(camera.position.x, camera.position.z), PLAYER_RADIUS)
