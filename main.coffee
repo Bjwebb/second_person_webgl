@@ -42,6 +42,9 @@ window.onload = ->
         new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR),
         new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR)
         ]
+    overhead_cam = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR)
+    overhead_cam.position.y = 2000
+    overhead_cam.rotation.x = -Math.PI / 2
     scene = new THREE.Scene()
 
 
@@ -54,7 +57,7 @@ window.onload = ->
 
     # create the sphere's material
     colors = [0xCC0000, 0x00CC00, 0x0000CC, 0xCCCC00, 0xCC00CC, 0x00CCCC]
-    readable_names = ["RED", "GREEN", "BLUE", "YELLOW", "PURPLE"
+    readable_names = ["RED", "GREEN", "BLUE", "YELLOW", "PURPLE"]
     win_msg = "418 - You are a teapot."
     lose_msg = "What?! You think this is a game?"
 
@@ -121,40 +124,43 @@ window.onload = ->
     scene.add light2
 
     animate = ->
-      requestAnimationFrame animate
-      render()
+        requestAnimationFrame animate
+        render()
 
     render = ->
-      views_x = Math.ceil(Math.sqrt(cameras.length))
-      views_y = if (views_x-1)*views_x >= cameras.length then views_x-1 else views_x
-      view_width = WIDTH/views_x
-      view_height = HEIGHT/views_y
-      if (has_webgl)
-          renderer.enableScissorTest(true)
-      for camera,i in cameras
-          if i == parseInt(player_id)
-              continue
-          x = i%views_x
-          y = Math.floor(i/views_x)
-          camera.aspect = view_width/view_height
-          # FIXME don't do this every frame
-          camera.updateProjectionMatrix()
-          if (has_webgl)
-              renderer.setViewport(x*view_width, y*view_height, view_width, view_height)
-              renderer.setScissor(x*view_width, y*view_height, view_width, view_height)
-          #camera.traverse (object) -> object.visible = false
-          renderer.render scene, camera
-          #camera.traverse (object) -> object.visible = true
+        views_x = Math.ceil(Math.sqrt(cameras.length))
+        views_y = if (views_x-1)*views_x >= cameras.length then views_x-1 else views_x
+        view_width = WIDTH/views_x
+        view_height = HEIGHT/views_y
+        if (has_webgl)
+            renderer.enableScissorTest(true)
+            for camera,i in cameras
+                if i == parseInt(player_id)
+                    continue
+                x = i%views_x
+                y = Math.floor(i/views_x)
+                camera.aspect = view_width/view_height
+                # FIXME don't do this every frame
+                camera.updateProjectionMatrix()
+                renderer.setViewport(x*view_width, y*view_height, view_width, view_height)
+                renderer.setScissor(x*view_width, y*view_height, view_width, view_height)
+                #camera.traverse (object) -> object.visible = false
+                renderer.render scene, camera
+                #camera.traverse (object) -> object.visible = true
+        else
+            overhead_cam.aspect = WIDTH/HEIGHT
+            overhead_cam.updateProjectionMatrix()
+            renderer.render scene, overhead_cam
 
     process_win = (id, remote=false) ->
         resetCameraPositions()
         scores[id] += 1
         $('#score'+id).html scores[id]
         if not remote
-            for other_id,player_connection of player_connections
+            for other_id, player_connection of player_connections
                 player_connection.send(
-                  event: 'win',
-                  player_id: id,
+                    event: 'win',
+                    player_id: id,
                 )
 
     process_lose = (id) ->
@@ -178,9 +184,10 @@ window.onload = ->
             when 40
                 camera.position.x += 10*Math.sin(camera.rotation.y)
                 camera.position.z += 10*Math.cos(camera.rotation.y)
-    # the camera starts at 0,0,0 so pull it back
-    #cameras[2].position.x = 300
-    #cameras[3].rotation.x = -Math.PI/2
+
+        # the camera starts at 0,0,0 so pull it back
+        #cameras[2].position.x = 300
+        #cameras[3].rotation.x = -Math.PI/2
 
         for wall_line in walls_vectors
             if line_intersects_circ(wall_line[0], wall_line[1], new THREE.Vector2(camera.position.x, camera.position.z), PLAYER_RADIUS)
@@ -207,17 +214,17 @@ window.onload = ->
                 camera.position = old_position
 
         for other_id,player_connection of player_connections
-          player_connection.send(
-            event: 'move',
-            player_id: player_id,
-            # FIXME
-            position_x: cameras[player_id].position.x,
-            position_y: cameras[player_id].position.y,
-            position_z: cameras[player_id].position.z,
-            rotation_x: cameras[player_id].rotation.x,
-            rotation_y: cameras[player_id].rotation.y,
-            rotation_z: cameras[player_id].rotation.z
-          )
+            player_connection.send(
+                event: 'move',
+                player_id: player_id,
+                # FIXME
+                position_x: cameras[player_id].position.x,
+                position_y: cameras[player_id].position.y,
+                position_z: cameras[player_id].position.z,
+                rotation_x: cameras[player_id].rotation.x,
+                rotation_y: cameras[player_id].rotation.y,
+                rotation_z: cameras[player_id].rotation.z
+            )
 
     peer.on('connection', (conn) ->
         console.log(conn)
@@ -249,10 +256,9 @@ window.onload = ->
                     process_win(data.player_id, true)
         )
 
-
     # draw!
     animate()
- 
+
 closest_point_on_seg = (seg_a, seg_b, circ_cent) ->
     seg_v = seg_b.clone().sub(seg_a)
     pt_v = circ_cent.clone().sub(seg_a)
