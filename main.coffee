@@ -70,7 +70,7 @@ window.onload = ->
 
     wallMaterial = new THREE.MeshLambertMaterial(0xCCCCCC)
     wallMaterial.side = THREE.DoubleSide
-    floor = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), wallMaterial)
+    floor = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), wallMaterial)
     floor.rotation.x = -Math.PI/2
     floor.position.y = -100
     scene.add floor
@@ -113,7 +113,6 @@ window.onload = ->
     render = ->
       views_x = Math.ceil(Math.sqrt(cameras.length))
       views_y = if (views_x-1)*views_x >= cameras.length then views_x-1 else views_x
-      console.log(views_x, views_y, cameras.length)
       view_width = WIDTH/views_x
       view_height = HEIGHT/views_y
       if (has_webgl)
@@ -161,6 +160,17 @@ window.onload = ->
         for other_id,other_camera of cameras
             if other_id == player_id
                 continue
+
+            matrix = new THREE.Matrix4()
+            matrix.extractRotation(camera.matrix)
+            direction = new THREE.Vector3(0, 0, 1)
+            direction.applyMatrix4(matrix)
+            if line_intersects_circ(
+                    new THREE.Vector2(other_camera.position.x, other_camera.position.z),
+                    new THREE.Vector2(other_camera.position.x+200*direction.x, other_camera.position.z+200*direction.z),
+                    new THREE.Vector2(camera.position.x, camera.position.z),
+                    PLAYER_RADIUS)
+                other_camera.position.y = -1000
             if other_camera.position.clone().sub(camera.position).length() < PLAYER_RADIUS*2
                 console.log('Teapot collision')
                 camera.position = old_position
