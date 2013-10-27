@@ -1,3 +1,11 @@
+# set some camera attributes
+VIEW_ANGLE = 70
+ASPECT = 1 #Temporary, reset below
+NEAR = 100
+FAR = 10000
+
+PLAYER_RADIUS = 110
+
 window.onload = ->
     player_id_full = location.hash.slice(1)
     id_prefix = player_id_full.split('_')[0]
@@ -8,7 +16,8 @@ window.onload = ->
     scores = {}
     keyState = {}
 
-    peer = new Peer(player_id_full, {key: 'bt01ki4in04tpgb9', debug:3})
+    peer = if id_prefix == 'anus' then new Peer(player_id_full, {host: 'localhost', port: 9000, debug:3}) else new Peer(player_id_full, {key: 'bt01ki4in04tpgb9', debug:3})
+    console.log peer
 
     if player_id != "0"
         other_id = "0"
@@ -20,13 +29,6 @@ window.onload = ->
     WIDTH = window.innerWidth
     HEIGHT = window.innerHeight
 
-    # set some camera attributes
-    VIEW_ANGLE = 70
-    ASPECT = 1 #Temporary, reset below
-    NEAR = 100
-    FAR = 10000
-
-    PLAYER_RADIUS = 110
 
     # get the DOM element to attach to
     # - assume we've got jQuery to hand
@@ -185,19 +187,17 @@ window.onload = ->
             if other_id_ == player_id
                 continue
 
-            matrix = new THREE.Matrix4()
-            matrix.extractRotation(camera.matrix)
-            direction = new THREE.Vector3(0, 0, 1)
-            direction.applyMatrix4(matrix)
-            if line_intersects_circ(
-                    new THREE.Vector2(other_camera.position.x, other_camera.position.z),
-                    new THREE.Vector2(other_camera.position.x+200*direction.x, other_camera.position.z+200*direction.z),
-                    new THREE.Vector2(camera.position.x, camera.position.z),
-                    PLAYER_RADIUS)
-                process_win(player_id)
-                process_lose(other_id)
-                $('#teapour').get(0).currentTime = 0
-                $('#teapour').get(0).play()
+            shivver = shivs(camera, other_camera)
+            shivved = shivs(other_camera, camera)
+            if (player_id < other_id)
+                if shivver and shivved
+                    process_draw(player_id, other_id)
+                else if shivver
+                    process_win(player_id)
+                    process_lose(other_id)
+                else if shivved
+                    process_win(other_id)
+                    process_lose(camera)
             if other_camera.position.clone().sub(camera.position).length() < PLAYER_RADIUS*2
                 console.log('Teapot collision')
                 camera.position = old_position
@@ -230,6 +230,23 @@ window.onload = ->
             overhead_cam.updateProjectionMatrix()
             renderer.render scene, overhead_cam
 
+    process_draw = (id1, id2, remote=false) ->
+        resetCameraPositions()
+        scores[id1] -= 1
+        $('#score'+id1).html scores[id1]
+        scores[id2] -= 1
+        $('#score'+id2).html scores[id2]
+        if not remote
+            for other_id, player_connection of player_connections
+                player_connection.send(
+                    event: 'draw',
+                    id1: id1,
+                    id2: id2
+                )
+        $('#teapour').get(0).currentTime = 0
+        $('#teapour').get(0).play()
+
+
     process_win = (id, remote=false) ->
         resetCameraPositions()
         scores[id] += 1
@@ -240,9 +257,12 @@ window.onload = ->
                     event: 'win',
                     player_id: id,
                 )
+        $('#teapour').get(0).currentTime = 0
+        $('#teapour').get(0).play()
 
     process_lose = (id) ->
-        null
+        $('#teapour').get(0).currentTime = 0
+        $('#teapour').get(0).play()
 
     $(document).keydown (event) ->
         if event.which of keyState[player_id]
@@ -314,6 +334,8 @@ window.onload = ->
                         players[k] = v
                 when 'win'
                     process_win(data.player_id, true)
+                when 'draw'
+                    process_draw(data.id1, data.id2, true)
                 when 'keyState'
                     keyState[data.player_id] = data.player_keyState
         )
@@ -336,3 +358,14 @@ closest_point_on_seg = (seg_a, seg_b, circ_cent) ->
 
 line_intersects_circ = (seg_a, seg_b, circ_cent, r) ->
     circ_cent.clone().sub(closest_point_on_seg(seg_a, seg_b, circ_cent)).length() <= r
+
+shivs = (camera, other_camera) ->
+    matrix = new THREE.Matrix4()
+    matrix.extractRotation(camera.matrix)
+    direction = new THREE.Vector3(0, 0, 1)
+    direction.applyMatrix4(matrix)
+    return line_intersects_circ(
+            new THREE.Vector2(other_camera.position.x, other_camera.position.z),
+            new THREE.Vector2(other_camera.position.x+200*direction.x, other_camera.position.z+200*direction.z),
+            new THREE.Vector2(camera.position.x, camera.position.z),
+            PLAYER_RADIUS)
