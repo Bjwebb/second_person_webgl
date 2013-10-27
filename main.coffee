@@ -147,7 +147,15 @@ window.onload = ->
                 rotation_z: cameras[player_id].rotation.z
             )
 
+
+    lastTime = 0
     animate = ->
+        timeNow = new Date().getTime()
+        elapsed = 0
+        if lastTime != 0
+            elapsed = timeNow - lastTime
+        lastTime = timeNow
+
         requestAnimationFrame animate
 
         old_position = cameras[player_id].position.clone()
@@ -156,21 +164,22 @@ window.onload = ->
             for code,pressed of keyState[k]
                 if pressed
                     code = parseInt(code)
+                    step = elapsed / 2
                     switch code
                         when 90 then camera.rotation.y += 0.1
                         when 88 then camera.rotation.y -= 0.1
                         when 37
-                            camera.position.x -= 10*Math.cos(camera.rotation.y)
-                            camera.position.z += 10*Math.sin(camera.rotation.y)
+                            camera.position.x -= step*Math.cos(camera.rotation.y)
+                            camera.position.z += step*Math.sin(camera.rotation.y)
                         when 38
-                            camera.position.x -= 10*Math.sin(camera.rotation.y)
-                            camera.position.z -= 10*Math.cos(camera.rotation.y)
+                            camera.position.x -= step*Math.sin(camera.rotation.y)
+                            camera.position.z -= step*Math.cos(camera.rotation.y)
                         when 39
-                            camera.position.x += 10*Math.cos(camera.rotation.y)
-                            camera.position.z -= 10*Math.sin(camera.rotation.y)
+                            camera.position.x += step*Math.cos(camera.rotation.y)
+                            camera.position.z -= step*Math.sin(camera.rotation.y)
                         when 40
-                            camera.position.x += 10*Math.sin(camera.rotation.y)
-                            camera.position.z += 10*Math.cos(camera.rotation.y)
+                            camera.position.x += step*Math.sin(camera.rotation.y)
+                            camera.position.z += step*Math.cos(camera.rotation.y)
 
         camera = cameras[player_id]
 
