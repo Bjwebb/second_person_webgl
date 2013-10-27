@@ -49,7 +49,7 @@ window.onload = ->
     renderer.setSize WIDTH, HEIGHT
 
     # attach the render-supplied DOM element
-    $container.append '<div style="float:left; font-size: 100px" id="scores"></div>'
+    $container.append '<div style="position: absolute; float:left; font-size: 100px" id="scores"></div>'
     $container.append renderer.domElement
 
     # create the sphere's material
